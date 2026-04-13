@@ -14,7 +14,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import os
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=os.environ.get('FLASK_TEMPLATE_FOLDER', 'templates'),
+    static_folder=os.environ.get('FLASK_STATIC_FOLDER', 'static')
+)
 
 # 配置
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'kucun-dev-secret-2024')
