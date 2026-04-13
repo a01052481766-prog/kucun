@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}库存操作 - 仓库库存管理系统{% endblock %}
+
+{% block content %}
+<div class="content">
+    <h1>库存操作</h1>
+    
+    <div class="operations-grid">
+        <div class="operation-card">
+            <h2>📥 入库</h2>
+            <form id="inForm" class="form-group-vertical">
+                <div class="form-group">
+                    <label>选择物料 *</label>
+                    <select id="inMaterial" required>
+                        <option value="">-- 请选择物料 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>入库数量 *</label>
+                    <input type="number" id="inQuantity" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>操作人员</label>
+                    <input type="text" id="inOperator" placeholder="输入您的名字">
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea id="inRemarks" rows="2"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">确认入库</button>
+            </form>
+        </div>
+
+        <div class="operation-card">
+            <h2>📤 出库</h2>
+            <form id="outForm" class="form-group-vertical">
+                <div class="form-group">
+                    <label>选择物料 *</label>
+                    <select id="outMaterial" required>
+                        <option value="">-- 请选择物料 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>出库数量 *</label>
+                    <input type="number" id="outQuantity" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>操作人员</label>
+                    <input type="text" id="outOperator" placeholder="输入您的名字">
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea id="outRemarks" rows="2"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">确认出库</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-section">
+        <h2>操作日志</h2>
+        <div class="filter-box">
+            <select id="filterType">
+                <option value="">所有操作</option>
+                <option value="in">入库</option>
+                <option value="out">出库</option>
+            </select>
+            <button onclick="loadOperations()" class="btn">刷新</button>
+        </div>
+        <table class="data-table" id="operationsTable">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>物料编码</th>
+                    <th>物料名称</th>
+                    <th>操作类型</th>
+                    <th>数量</th>
+                    <th>操作人员</th>
+                    <th>备注</th>
+                </tr>
+            </thead>
+            <tbody id="operationsBody">
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 20px;">加载中...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let materials = [];
+
+    // 加载物料列表
+    async function loadMaterials() {
+        try {
+            const response = await fetch('/api/materials');
+            materials = await response.json();
+            
+            const inSelect = document.getElementById('inMaterial');
+            const outSelect = document.getElementById('outMaterial');
+            
+            const options = materials.map(m => 
+                `<option value="${m.id}">${m.code} - ${m.name} (当前库存: ${m.current_quantity}${m.unit})</option>`
+            ).join('');
+            
+            inSelect.innerHTML = '<option value="">-- 请选择物料 --</option>' + options;
+            outSelect.innerHTML = '<option value="">-- 请选择物料 --</option>' + options;
+        } catch (error) {
+            console.error('Error loading materials:', error);
+        }
+    }
+
+    // 入库操作
+    document.getElementById('inForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const data = {
+            material_id: parseInt(document.getElementById('inMaterial').value),
+            quantity: parseFloat(document.getElementById('inQuantity').value),
+            operator: document.getElementById('inOperator').value || '未知',
+            remarks: document.getElementById('inRemarks').value
+        };
+        
+        try {
+            const response = await fetch('/api/inventory/in', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                showNotification(result.message, 'success');
+                document.getElementById('inForm').reset();
+                loadMaterials();
+                loadOperations();
+            } else {
+                showNotification(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('入库失败', 'error');
+        }
+    });
+
+    // 出库操作
+    document.getElementById('outForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const data = {
+            material_id: parseInt(document.getElementById('outMaterial').value),
+            quantity: parseFloat(document.getElementById('outQuantity').value),
+            operator: document.getElementById('outOperator').value || '未知',
+            remarks: document.getElementById('outRemarks').value
+        };
+        
+        try {
+            const response = await fetch('/api/inventory/out', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                showNotification(result.message, 'success');
+                document.getElementById('outForm').reset();
+                loadMaterials();
+                loadOperations();
+            } else {
+                showNotification(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('出库失败', 'error');
+        }
+    });
+
+    // 加载操作日志
+    async function loadOperations() {
+        try {
+            const filterType = document.getElementById('filterType').value;
+            const url = `/api/inventory/operations${filterType ? `?type=${filterType}` : ''}`;
+            
+            const response = await fetch(url);
+            const operations = await response.json();
+            
+            const tbody = document.getElementById('operationsBody');
+            if (operations.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">暂无操作记录</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = operations.map(op => `
+                <tr>
+                    <td>${op.created_at}</td>
+                    <td>${op.material_code}</td>
+                    <td>${op.material_name}</td>
+                    <td><span class="badge ${op.operation_type === '入库' ? 'success' : 'warning'}">${op.operation_type}</span></td>
+                    <td>${op.quantity}</td>
+                    <td>${op.operator}</td>
+                    <td>${op.remarks || '-'}</td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error('Error loading operations:', error);
+        }
+    }
+
+    // 筛选器变化时刷新
+    document.getElementById('filterType').addEventListener('change', loadOperations);
+
+    // 页面加载时获取数据
+    loadMaterials();
+    loadOperations();
+    
+    // 每分钟刷新一次操作日志
+    setInterval(loadOperations, 60000);
+</script>
+{% endblock %}

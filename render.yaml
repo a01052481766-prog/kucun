@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: kucun
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kucun-db
+          property: connectionString
+
+databases:
+  - name: kucun-db
+    databaseName: kucun
+    user: kucun
+    plan: free

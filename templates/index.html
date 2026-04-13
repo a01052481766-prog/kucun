@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}概览 - 仓库库存管理系统{% endblock %}
+
+{% block content %}
+<div class="content">
+    <h1>仓库概览</h1>
+    
+    <div class="dashboard">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">物料种类</div>
+                <div class="stat-value" id="totalMaterials">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">总库存数量</div>
+                <div class="stat-value" id="totalQuantity">0</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-label">库存预警</div>
+                <div class="stat-value" id="lowStockCount">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alerts-section">
+        <h2>⚠️ 库存预警</h2>
+        <table class="alert-table" id="alertTable">
+            <thead>
+                <tr>
+                    <th>物料编码</th>
+                    <th>物料名称</th>
+                    <th>当前库存</th>
+                    <th>最低库存</th>
+                    <th>状态</th>
+                </tr>
+            </thead>
+            <tbody id="alertTableBody">
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 20px;">加载中...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="quick-links">
+        <h2>快捷操作</h2>
+        <div class="link-grid">
+            <a href="/materials" class="link-btn">
+                <div class="link-icon">📝</div>
+                <div class="link-text">添加物料</div>
+            </a>
+            <a href="/inventory" class="link-btn">
+                <div class="link-icon">📥</div>
+                <div class="link-text">库存操作</div>
+            </a>
+            <a href="/report" class="link-btn">
+                <div class="link-icon">📊</div>
+                <div class="link-text">查看报表</div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function loadSummary() {
+        try {
+            const response = await fetch('/api/report/summary');
+            const data = await response.json();
+            
+            document.getElementById('totalMaterials').textContent = data.total_materials;
+            document.getElementById('totalQuantity').textContent = data.total_quantity;
+            document.getElementById('lowStockCount').textContent = data.low_stock_count;
+            
+            // 显示预警物料
+            const tbody = document.getElementById('alertTableBody');
+            if (data.low_stock_items.length > 0) {
+                tbody.innerHTML = data.low_stock_items.map(item => `
+                    <tr>
+                        <td>${item.code}</td>
+                        <td>${item.name}</td>
+                        <td><strong>${item.current}</strong></td>
+                        <td>${item.min}</td>
+                        <td><span class="badge warning">需补货</span></td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">所有库存正常</td></tr>';
+            }
+        } catch (error) {
+            console.error('Error loading summary:', error);
+        }
+    }
+    
+    // 页面加载时获取数据
+    loadSummary();
+    
+    // 每30秒刷新一次
+    setInterval(loadSummary, 30000);
+</script>
+{% endblock %}

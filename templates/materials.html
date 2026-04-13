@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block title %}物料管理 - 仓库库存管理系统{% endblock %}
+
+{% block content %}
+<div class="content">
+    <h1>物料管理</h1>
+    
+    <div class="form-section">
+        <h2>添加新物料</h2>
+        <form id="materialForm" class="form-grid">
+            <div class="form-group">
+                <label>物料编码 *</label>
+                <input type="text" id="code" placeholder="如：001-A" required>
+            </div>
+            <div class="form-group">
+                <label>物料名称 *</label>
+                <input type="text" id="name" placeholder="如：螺丝" required>
+            </div>
+            <div class="form-group">
+                <label>单位</label>
+                <select id="unit">
+                    <option value="个">个</option>
+                    <option value="套">套</option>
+                    <option value="件">件</option>
+                    <option value="盒">盒</option>
+                    <option value="斤">斤</option>
+                    <option value="kg">kg</option>
+                    <option value="m">m</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>分类</label>
+                <input type="text" id="category" placeholder="如：五金配件">
+            </div>
+            <div class="form-group">
+                <label>初始数量</label>
+                <input type="number" id="initial_quantity" step="0.01" value="0">
+            </div>
+            <div class="form-group">
+                <label>最低库存</label>
+                <input type="number" id="min_quantity" step="0.01" value="0">
+            </div>
+            <div class="form-group">
+                <label>最高库存</label>
+                <input type="number" id="max_quantity" step="0.01" value="0">
+            </div>
+            <div class="form-group full">
+                <label>备注</label>
+                <textarea id="remarks" rows="2" placeholder="输入任何备注信息"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">添加物料</button>
+        </form>
+    </div>
+
+    <div class="table-section">
+        <h2>物料列表</h2>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="搜索物料名称或编码...">
+        </div>
+        <table class="data-table" id="materialsTable">
+            <thead>
+                <tr>
+                    <th>编码</th>
+                    <th>名称</th>
+                    <th>单位</th>
+                    <th>分类</th>
+                    <th>当前数量</th>
+                    <th>最低库存</th>
+                    <th>最高库存</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="materialsBody">
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 20px;">加载中...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn">&times;</span>
+        <h2>编辑物料</h2>
+        <form id="editForm" class="form-grid">
+            <input type="hidden" id="editId">
+            <div class="form-group">
+                <label>物料名称</label>
+                <input type="text" id="editName" required>
+            </div>
+            <div class="form-group">
+                <label>单位</label>
+                <select id="editUnit">
+                    <option value="个">个</option>
+                    <option value="套">套</option>
+                    <option value="件">件</option>
+                    <option value="盒">盒</option>
+                    <option value="斤">斤</option>
+                    <option value="kg">kg</option>
+                    <option value="m">m</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>分类</label>
+                <input type="text" id="editCategory">
+            </div>
+            <div class="form-group">
+                <label>最低库存</label>
+                <input type="number" id="editMinQty" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>最高库存</label>
+                <input type="number" id="editMaxQty" step="0.01">
+            </div>
+            <div class="form-group full">
+                <label>备注</label>
+                <textarea id="editRemarks" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">保存修改</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    let allMaterials = [];
+
+    // 加载物料列表
+    async function loadMaterials() {
+        try {
+            const response = await fetch('/api/materials');
+            allMaterials = await response.json();
+            displayMaterials(allMaterials);
+        } catch (error) {
+            console.error('Error loading materials:', error);
+            showNotification('加载物料失败', 'error');
+        }
+    }
+
+    // 显示物料列表
+    function displayMaterials(materials) {
+        const tbody = document.getElementById('materialsBody');
+        if (materials.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">暂无物料</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = materials.map(m => `
+            <tr>
+                <td>${m.code}</td>
+                <td>${m.name}</td>
+                <td>${m.unit}</td>
+                <td>${m.category || '-'}</td>
+                <td><strong>${m.current_quantity}</strong></td>
+                <td>${m.min_quantity}</td>
+                <td>${m.max_quantity}</td>
+                <td>
+                    <button class="btn-small" onclick="editMaterial(${m.id})">编辑</button>
+                    <button class="btn-small danger" onclick="deleteMaterial(${m.id})">删除</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // 添加物料
+    document.getElementById('materialForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const data = {
+            code: document.getElementById('code').value,
+            name: document.getElementById('name').value,
+            unit: document.getElementById('unit').value,
+            category: document.getElementById('category').value,
+            initial_quantity: parseFloat(document.getElementById('initial_quantity').value) || 0,
+            min_quantity: parseFloat(document.getElementById('min_quantity').value) || 0,
+            max_quantity: parseFloat(document.getElementById('max_quantity').value) || 0,
+            remarks: document.getElementById('remarks').value
+        };
+        
+        try {
+            const response = await fetch('/api/materials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                showNotification('物料添加成功！', 'success');
+                document.getElementById('materialForm').reset();
+                loadMaterials();
+            } else {
+                showNotification(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error adding material:', error);
+            showNotification('添加物料失败', 'error');
+        }
+    });
+
+    // 编辑物料
+    async function editMaterial(id) {
+        const material = allMaterials.find(m => m.id === id);
+        if (!material) return;
+        
+        document.getElementById('editId').value = id;
+        document.getElementById('editName').value = material.name;
+        document.getElementById('editUnit').value = material.unit;
+        document.getElementById('editCategory').value = material.category;
+        document.getElementById('editMinQty').value = material.min_quantity;
+        document.getElementById('editMaxQty').value = material.max_quantity;
+        document.getElementById('editRemarks').value = material.remarks || '';
+        
+        openModal('editModal');
+    }
+
+    // 保存修改
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const id = document.getElementById('editId').value;
+        const data = {
+            name: document.getElementById('editName').value,
+            unit: document.getElementById('editUnit').value,
+            category: document.getElementById('editCategory').value,
+            min_quantity: parseFloat(document.getElementById('editMinQty').value) || 0,
+            max_quantity: parseFloat(document.getElementById('editMaxQty').value) || 0,
+            remarks: document.getElementById('editRemarks').value
+        };
+        
+        try {
+            const response = await fetch(`/api/materials/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                showNotification('物料更新成功！', 'success');
+                closeModal('editModal');
+                loadMaterials();
+            } else {
+                showNotification(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error updating material:', error);
+            showNotification('更新物料失败', 'error');
+        }
+    });
+
+    // 删除物料
+    async function deleteMaterial(id) {
+        if (!confirm('确定要删除此物料吗？此操作无法撤销。')) return;
+        
+        try {
+            const response = await fetch(`/api/materials/${id}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                showNotification('物料删除成功！', 'success');
+                loadMaterials();
+            } else {
+                showNotification(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting material:', error);
+            showNotification('删除物料失败', 'error');
+        }
+    }
+
+    // 搜索功能
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        const keyword = e.target.value.toLowerCase();
+        const filtered = allMaterials.filter(m => 
+            m.name.toLowerCase().includes(keyword) || 
+            m.code.toLowerCase().includes(keyword)
+        );
+        displayMaterials(filtered);
+    });
+
+    // 页面加载时获取数据
+    loadMaterials();
+</script>
+{% endblock %}

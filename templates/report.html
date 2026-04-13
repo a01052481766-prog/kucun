@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}数据统计 - 仓库库存管理系统{% endblock %}
+
+{% block content %}
+<div class="content">
+    <h1>数据统计</h1>
+    
+    <div class="report-section">
+        <h2>库存汇总</h2>
+        <div class="controls">
+            <button onclick="exportToExcel()" class="btn btn-primary">📊 导出为 Excel</button>
+            <button onclick="printReport()" class="btn">🖨️ 打印</button>
+            <button onclick="refreshReport()" class="btn">🔄 刷新</button>
+        </div>
+        
+        <table class="data-table" id="reportTable">
+            <thead>
+                <tr>
+                    <th>物料编码</th>
+                    <th>物料名称</th>
+                    <th>单位</th>
+                    <th>初始数量</th>
+                    <th>入库</th>
+                    <th>出库</th>
+                    <th>当前库存</th>
+                    <th>结余</th>
+                </tr>
+            </thead>
+            <tbody id="reportBody">
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 20px;">加载中...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="summary-section">
+        <h3>统计摘要</h3>
+        <div class="summary-stats">
+            <div class="summary-item">
+                <span class="summary-label">总物料种类</span>
+                <span class="summary-value" id="summaryTotal">0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">总库存数量</span>
+                <span class="summary-value" id="summaryQuantity">0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">总入库数量</span>
+                <span class="summary-value" id="summaryIn">0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">总出库数量</span>
+                <span class="summary-value" id="summaryOut">0</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 加载报表数据
+    async function loadReport() {
+        try {
+            const response = await fetch('/api/report/materials');
+            const report = await response.json();
+            
+            const tbody = document.getElementById('reportBody');
+            if (report.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">暂无数据</td></tr>';
+                return;
+            }
+            
+            let totalCurrent = 0, totalIn = 0, totalOut = 0;
+            
+            tbody.innerHTML = report.map(item => {
+                totalCurrent += item.current_quantity;
+                totalIn += item.in_quantity;
+                totalOut += item.out_quantity;
+                
+                return `
+                    <tr>
+                        <td>${item.code}</td>
+                        <td>${item.name}</td>
+                        <td>${item.unit}</td>
+                        <td>${item.initial_quantity}</td>
+                        <td class="positive">${item.in_quantity}</td>
+                        <td class="negative">${item.out_quantity}</td>
+                        <td><strong>${item.current_quantity}</strong></td>
+                        <td class="${item.surplus >= 0 ? 'positive' : 'negative'}">${item.surplus >= 0 ? '+' : ''}${item.surplus}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // 更新统计摘要
+            document.getElementById('summaryTotal').textContent = report.length;
+            document.getElementById('summaryQuantity').textContent = totalCurrent;
+            document.getElementById('summaryIn').textContent = totalIn;
+            document.getElementById('summaryOut').textContent = totalOut;
+            
+        } catch (error) {
+            console.error('Error loading report:', error);
+            showNotification('加载报表失败', 'error');
+        }
+    }
+
+    // 刷新报表
+    function refreshReport() {
+        loadReport();
+        showNotification('报表已刷新', 'success');
+    }
+
+    // 导出为 Excel
+    function exportToExcel() {
+        const table = document.getElementById('reportTable');
+        const headers = [];
+        const rows = [];
+        
+        // 获取表头
+        table.querySelectorAll('thead tr th').forEach(th => {
+            headers.push(th.textContent);
+        });
+        
+        // 获取数据行
+        table.querySelectorAll('tbody tr').forEach(tr => {
+            const row = [];
+            tr.querySelectorAll('td').forEach(td => {
+                row.push(td.textContent);
+            });
+            rows.push(row);
+        });
+        
+        // 创建 CSV 内容
+        let csv = headers.join(',') + '\n';
+        rows.forEach(row => {
+            csv += row.join(',') + '\n';
+        });
+        
+        // 创建下载链接
+        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `库存报表_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showNotification('报表已导出', 'success');
+    }
+
+    // 打印报表
+    function printReport() {
+        window.print();
+    }
+
+    // 页面加载时获取数据
+    loadReport();
+    
+    // 每5分钟刷新一次
+    setInterval(loadReport, 300000);
+</script>
+
+<style>
+    @media print {
+        .navbar, .controls, .summary-section, button, .link-grid, .operations-grid {
+            display: none;
+        }
+        .report-section {
+            margin-top: 20px;
+        }
+    }
+</style>
+{% endblock %}
