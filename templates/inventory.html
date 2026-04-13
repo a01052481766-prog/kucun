@@ -21,10 +21,6 @@
                     <input type="number" id="inQuantity" step="0.01" min="0" required>
                 </div>
                 <div class="form-group">
-                    <label>操作人员</label>
-                    <input type="text" id="inOperator" placeholder="输入您的名字">
-                </div>
-                <div class="form-group">
                     <label>备注</label>
                     <textarea id="inRemarks" rows="2"></textarea>
                 </div>
@@ -44,10 +40,6 @@
                 <div class="form-group">
                     <label>出库数量 *</label>
                     <input type="number" id="outQuantity" step="0.01" min="0" required>
-                </div>
-                <div class="form-group">
-                    <label>操作人员</label>
-                    <input type="text" id="outOperator" placeholder="输入您的名字">
                 </div>
                 <div class="form-group">
                     <label>备注</label>
@@ -119,7 +111,6 @@
         const data = {
             material_id: parseInt(document.getElementById('inMaterial').value),
             quantity: parseFloat(document.getElementById('inQuantity').value),
-            operator: document.getElementById('inOperator').value || '未知',
             remarks: document.getElementById('inRemarks').value
         };
         
@@ -152,7 +143,6 @@
         const data = {
             material_id: parseInt(document.getElementById('outMaterial').value),
             quantity: parseFloat(document.getElementById('outQuantity').value),
-            operator: document.getElementById('outOperator').value || '未知',
             remarks: document.getElementById('outRemarks').value
         };
         

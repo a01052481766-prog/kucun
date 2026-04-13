@@ -16,7 +16,16 @@
                 <li><a href="/materials" class="{% if request.path == '/materials' %}active{% endif %}">物料管理</a></li>
                 <li><a href="/inventory" class="{% if request.path == '/inventory' %}active{% endif %}">库存操作</a></li>
                 <li><a href="/report" class="{% if request.path == '/report' %}active{% endif %}">数据统计</a></li>
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                <li><a href="/users" class="{% if request.path == '/users' %}active{% endif %}">用户管理</a></li>
+                {% endif %}
             </ul>
+            {% if current_user.is_authenticated %}
+            <div class="nav-user">
+                <span class="nav-username">👤 {{ current_user.username }}</span>
+                <a href="/logout" class="nav-logout">退出</a>
+            </div>
+            {% endif %}
         </div>
     </nav>
 

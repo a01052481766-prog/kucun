@@ -67,6 +67,84 @@ body {
     background-color: var(--primary-color);
 }
 
+/* 导航栏用户信息 */
+.nav-user {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.nav-username {
+    color: #ccc;
+    font-size: 0.95rem;
+}
+
+.nav-logout {
+    color: white;
+    text-decoration: none;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid rgba(255,255,255,0.4);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+}
+
+.nav-logout:hover {
+    background-color: rgba(255,255,255,0.15);
+}
+
+/* 登录页 */
+.login-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: #2c3e50;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+    padding: 1rem;
+}
+
+.login-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2.5rem 2rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.login-logo {
+    font-size: 3rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.login-title {
+    text-align: center;
+    font-size: 1.3rem;
+    color: #2c3e50;
+    margin-bottom: 2rem;
+}
+
+.login-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.login-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.9rem;
+    font-size: 1rem;
+}
+
 /* 容器 */
 .container {
     max-width: 1200px;
